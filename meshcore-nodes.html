@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MeshCore - Nodes</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel: rgba(255,255,255,0.06);
+      --panel2: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.12);
+      --text:#e8eefc;
+      --muted:#a9b6d3;
+      --danger:#ff6b6b;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --radius: 16px;
+    }
+
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(125, 211, 252, 0.25), transparent 60%),
+                  radial-gradient(1000px 700px at 80% 20%, rgba(167, 139, 250, 0.22), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+    }
+
+    .wrap { padding: 18px; max-width: 1500px; margin: 0 auto; }
+    .topbar {
+      display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    h1 { margin: 0; font-size: 18px; letter-spacing: 0.2px; }
+    .sub { color: var(--muted); font-size: 12px; }
+
+    .pill {
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px; border: 1px solid var(--border);
+      border-radius: 999px; background: rgba(255,255,255,0.04);
+      color: var(--muted); font-size: 12px;
+    }
+    code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 8px; color: #dbeafe; }
+
+    .controls {
+      display:flex; gap:10px; flex-wrap: wrap; align-items: center;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    label { font-size: 12px; color: var(--muted); display:flex; gap:8px; align-items:center; }
+    input, select, button {
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      outline: none;
+    }
+    input { width: 110px; }
+    input.search { width: 240px; }
+    select { padding-right: 28px; }
+    button {
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(125,211,252,0.22), rgba(167,139,250,0.18));
+      border: 1px solid rgba(125,211,252,0.28);
+    }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+
+    .status { margin-left: auto; display:flex; gap:10px; align-items:center; }
+    .statusText { font-size: 12px; color: var(--muted); }
+    .err { margin-top: 10px; color: var(--danger); font-size: 12px; white-space: pre-wrap; }
+
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: 620px;
+    }
+
+    .cardHeader {
+      display:flex; justify-content: space-between; align-items:center;
+      padding: 12px 12px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .cardTitle { font-size: 13px; color: var(--text); }
+    .cardMeta { font-size: 12px; color: var(--muted); }
+
+    /* Map taller */
+    #map { height: 460px; border-radius: 0; border: 0; }
+
+    /* Under-map section (full width) */
+    .underMap {
+      padding: 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.10);
+    }
+
+    /* Chart section under nodes (full width) */
+    .underNodes {
+      padding: 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.10);
+    }
+
+    .miniCard {
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+      overflow: hidden;
+    }
+    .miniCardHeader {
+      padding: 10px 10px 8px;
+      display:flex; justify-content: space-between; align-items: baseline;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .miniCardHeader .t { font-size: 12px; color: var(--text); }
+    .miniCardHeader .m { font-size: 11px; color: var(--muted); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(0,0,0,0.25);
+      backdrop-filter: blur(6px);
+      z-index: 2;
+      font-weight: 600;
+      color: #e5e7eb;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      padding: 10px 10px;
+      text-align: left;
+    }
+    tbody td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      vertical-align: top;
+      color: #e5e7eb;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.04); }
+
+    .mutedCell { color: var(--muted); }
+    .mini { font-size: 10px; color: var(--muted); }
+    .nowrap { white-space: nowrap; }
+
+    /* lighter marker */
+    .mc-marker {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      /* High-contrast "inverted" marker to pop on dark map tiles */
+      background: rgba(15, 23, 42, 0.95); /* dark core */
+      border: 2px solid var(--mc-color, #e5e7eb);
+      box-shadow:
+        0 0 0 2px rgba(0,0,0,0.35),
+        0 0 10px var(--mc-color, #e5e7eb);
+
+      backdrop-filter: blur(2px);
+    }
+    .mc-marker .emoji {
+      font-size: 10px;
+      line-height: 1;
+      color: #f8fafc;
+    }
+
+    
+    /* Hover-highlight marker */
+    .mc-marker.is-hover {
+      transform: scale(1.6);
+      box-shadow:
+        0 0 0 3px rgba(255,255,255,0.35),
+        0 0 18px var(--mc-color, #e5e7eb);
+      border-width: 3px;
+    }
+/* Nodes table area taller */
+    .nodesTableScroll { max-height: 520px; overflow: auto; }
+
+    /* Rollup table taller */
+    .rollupTableScroll { max-height: 240px; overflow:auto; }
+
+    /* Chart bigger for hover detail */
+    .chartWrap { padding: 10px 10px 12px; }
+    canvas { width: 100% !important; }
+
+    @media (max-width: 1100px) {
+      .main { grid-template-columns: 1fr; }
+      .card { min-height: unset; }
+      #map { height: 420px; }
+      .nodesTableScroll { max-height: 460px; }
+      input.search { width: 100%; min-width: 220px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="topbar">
+      <h1>MeshCore – Nodes</h1>
+      <div class="sub">
+        Proxy: <code>http://127.0.0.1:8787/nodes</code> • Click map to set center + radius
+      </div>
+      <div class="pill" id="centerPill">Center: …</div>
+    </div>
+
+    <div class="controls">
+      <label>Search
+        <input id="searchTxt" class="search" type="text" placeholder="e.g. Purple_IJBurg / public key…">
+      </label>
+
+      <label>New in last
+        <input id="daysNew" type="number" min="0" value="7">
+        <span class="mini">days</span>
+      </label>
+
+      <label>Radius
+        <input id="radiusKm" type="number" min="1" value="50">
+        <span class="mini">km</span>
+      </label>
+
+      <label>Type
+        <select id="typeFilter">
+          <option value="all">All</option>
+          <option value="1">Client</option>
+          <option value="2">Repeater</option>
+          <option value="3">Room Server</option>
+          <option value="4">Sensor</option>
+        </select>
+      </label>
+
+      <label>“New” based on
+        <select id="newBasis">
+          <option value="inserted_date" selected>inserted_date</option>
+          <option value="first_seen">first_seen</option>
+        </select>
+      </label>
+
+      <button id="btnRefresh">Refresh</button>
+
+      <div class="status">
+        
+        <div class="statusText" id="lastRefresh">Last refresh: –</div>
+<div class="statusText" id="status"></div>
+      </div>
+    </div>
+
+    <div id="err" class="err"></div>
+
+    <div class="main">
+      <!-- LEFT: Map + Daily new table under it (full width) -->
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <div class="cardTitle">Map</div>
+            <div class="cardMeta">Click to move center • Circle = filter radius • Markers match Type</div>
+          </div>
+          <div class="cardMeta" id="mapMeta"></div>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="underMap">
+          <div class="miniCard">
+            <div class="miniCardHeader">
+              <div class="t">Daily new nodes (by inserted_date)</div>
+              <div class="m" id="rollupMeta">–</div>
+            </div>
+            <div class="rollupTableScroll">
+              <table id="rollupTbl">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th class="nowrap">Client</th>
+                    <th class="nowrap">Repeater</th>
+                    <th class="nowrap">Room</th>
+                    <th class="nowrap">Sensor</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody id="rollupBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mini" style="margin-top:10px;">
+            Tip: increase radius + new-window to “all” for global trends. Search filters name + public key.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Nodes table + Chart under it (full width) -->
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <div class="cardTitle">Results</div>
+            <div class="cardMeta">Sorted by newest inserted_date</div>
+          </div>
+          <div class="cardMeta" id="countMeta"></div>
+        </div>
+
+        <div class="nodesTableScroll">
+          <table id="tbl" hidden>
+            <thead>
+              <tr>
+                <th style="width: 36%;">Name</th>
+                <th style="width: 16%;">Type</th>
+                <th style="width: 18%;">Inserted</th>
+                <th style="width: 18%;">Updated</th>
+                <th style="width: 12%;">Dist</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="underNodes">
+          <div class="miniCard">
+            <div class="miniCardHeader">
+              <div class="t">Analytics</div>
+              <div class="m">
+                <select id="chartPicker">
+                  <option value="stacked" selected>Daily adds (stacked)</option>
+                  <option value="cumulative">Cumulative growth</option>
+                  <option value="movingAvg">7-day moving average</option>
+                  <option value="distribution">Type distribution</option>
+                  <option value="distance">Distance distribution</option>
+                  <option value="freshness">Freshness</option>
+                </select>
+              </div>
+            </div>
+            <div class="chartWrap">
+              <canvas id="analyticsChart" height="240"></canvas>
+            </div>
+          </div>
+
+          <div class="mini" style="margin-top:10px;">
+            Tip: switch chart type using the picker. Charts update with the current filters.
+          </div>
+        </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+  (() => {
+    const API_URL = "http://127.0.0.1:8787/nodes";
+
+    let center = { lat: 51.5074, lon: -0.1278 }; // London
+
+    const TYPE_INFO = {
+      1: { label: "Client",      emoji: "👤" },
+      2: { label: "Repeater",    emoji: "📡" },
+      3: { label: "Room Server", emoji: "🏠" },
+      4: { label: "Sensor",      emoji: "🌡️" },
+    };
+
+    const TYPE_COLORS = {
+      1: "#38bdf8", // Client – cyan
+      2: "#facc15", // Repeater – amber
+      3: "#a78bfa", // Room – violet
+      4: "#34d399", // Sensor – green
+    };
+
+
+    const elSearch = document.getElementById("searchTxt");
+    const elDaysNew = document.getElementById("daysNew");
+    const elRadiusKm = document.getElementById("radiusKm");
+    const elTypeFilter = document.getElementById("typeFilter");
+    const elNewBasis = document.getElementById("newBasis");
+    const elStatus = document.getElementById("status");
+    
+    const elLastRefresh = document.getElementById("lastRefresh");
+
+    const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+    let lastFetchMs = 0;
+    let refreshInFlight = null;
+const elErr = document.getElementById("err");
+    const elTbl = document.getElementById("tbl");
+    const elTbody = document.getElementById("tbody");
+    const elCenterPill = document.getElementById("centerPill");
+    const elMapMeta = document.getElementById("mapMeta");
+    const elCountMeta = document.getElementById("countMeta");
+
+    const elRollupMeta = document.getElementById("rollupMeta");
+    const elRollupBody = document.getElementById("rollupBody");
+    const elChartPicker = document.getElementById("chartPicker");
+    const elAnalyticsChart = document.getElementById("analyticsChart");
+
+    let allNodes = [];
+    const charts = { analytics: null };
+    let lastFilteredRows = [];
+    let lastRadiusKm = 50;
+    let currentChart = "stacked";
+
+    const map = L.map("map").setView([center.lat, center.lon], 10);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    const centerMarker = L.circleMarker([center.lat, center.lon], { radius: 4, weight: 1, fillOpacity: 0.8 }).addTo(map);
+    const circle = L.circle([center.lat, center.lon], { radius: 50 * 1000 }).addTo(map);
+    const markerLayer = L.layerGroup().addTo(map);
+
+    
+    const markerIndex = new Map(); // key -> Leaflet marker
+    let highlightedKey = null;
+
+    function clearHighlight() {
+      if (!highlightedKey) return;
+      const m = markerIndex.get(highlightedKey);
+      const el = m && m.getElement ? m.getElement() : null;
+      if (el) {
+        const inner = el.querySelector(".mc-marker");
+        if (inner) inner.classList.remove("is-hover");
+      }
+      highlightedKey = null;
+    }
+
+    function highlightMarker(key) {
+      if (!key) return;
+      if (highlightedKey === key) return;
+      clearHighlight();
+      const m = markerIndex.get(key);
+      if (!m) return;
+      highlightedKey = key;
+
+      // Ensure element exists (Leaflet may not have rendered it yet)
+      const el = m.getElement ? m.getElement() : null;
+      if (el) {
+        const inner = el.querySelector(".mc-marker");
+        if (inner) inner.classList.add("is-hover");
+      }
+
+      // Optional: bring it into view subtly (no jumpy pan)
+      // map.panTo(m.getLatLng(), { animate: true, duration: 0.2 });
+    }
+function updateCenterUI() {
+      elCenterPill.textContent = `Center: ${center.lat.toFixed(5)}, ${center.lon.toFixed(5)}`;
+    }
+    updateCenterUI();
+
+    // Keep zoom anchored to the chosen filter center (the point that defines the radius circle).
+    // Leaflet normally zooms around the mouse pointer; this recenters to our selected center after each zoom.
+    map.on("zoomend", () => {
+      map.panTo([center.lat, center.lon], { animate: false });
+    });
+
+    map.on("click", (e) => {
+      
+      clearHighlight();
+center = { lat: e.latlng.lat, lon: e.latlng.lng };
+      centerMarker.setLatLng([center.lat, center.lon]);
+            map.panTo([center.lat, center.lon], { animate: true, duration: 0.2 });
+updateCenterUI();
+      maybeRefreshAndRender();
+    });
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    function getLatLon(n) {
+      if (typeof n.lat === "number" && typeof n.lon === "number") return { lat: n.lat, lon: n.lon };
+      if (typeof n.adv_lat === "number" && typeof n.adv_lon === "number") return { lat: n.adv_lat, lon: n.adv_lon };
+      return null;
+    }
+
+    function getName(n) {
+      return n.adv_name || n.name || n.display_name || n.displayName || n.public_key || n._key || "(unknown)";
+    }
+
+    function getType(n) { return Number(n.type); }
+
+    function typeLabel(t) {
+      const info = TYPE_INFO[t];
+      return info ? info.label : `Unknown (${t})`;
+    }
+
+    function parseMs(v) {
+      if (!v) return null;
+      if (typeof v === "number") return v < 2e12 ? v * 1000 : v;
+      if (typeof v === "string") {
+        const t = Date.parse(v);
+        return Number.isNaN(t) ? null : t;
+      }
+      return null;
+    }
+
+    function ymdFromMs(ms) {
+      const d = new Date(ms);
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(d.getUTCDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function fmtLocal(ms) {
+      return new Date(ms).toLocaleString();
+    }
+
+    function setLastRefreshUI(ms) {
+      if (!elLastRefresh) return;
+      elLastRefresh.textContent = ms ? `Last refresh: ${fmtLocal(ms)}` : "Last refresh: –";
+    }
+
+    function isCacheStale() {
+      return !lastFetchMs || (Date.now() - lastFetchMs) > CACHE_TTL_MS;
+    }
+
+    async function fetchAndCacheNodes() {
+      const resp = await fetch(API_URL, { cache: "no-store" });
+      if (!resp.ok) throw new Error(`Proxy/API failed: ${resp.status}`);
+      const data = await resp.json();
+      if (!Array.isArray(data)) throw new Error("Unexpected /nodes response (expected array)");
+      allNodes = data;
+      lastFetchMs = Date.now();
+      setLastRefreshUI(lastFetchMs);
+    }
+
+    async function ensureFreshNodes(force=false) {
+      if (!force && !isCacheStale()) return;
+      if (refreshInFlight) return refreshInFlight;
+
+      refreshInFlight = (async () => {
+        try {
+          await fetchAndCacheNodes();
+        } finally {
+          refreshInFlight = null;
+        }
+      })();
+
+      return refreshInFlight;
+    }
+
+    function officialMapLink(lat, lon) {
+      const nodes = encodeURIComponent("1,2,3,4");
+      return `https://map.meshcore.dev/?zoom=12&lat=${lat}&lon=${lon}&nodes=${nodes}&cluster=15`;
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function clearMarkers() { markerLayer.clearLayers(); markerIndex.clear(); highlightedKey = null; }
+
+    function makeNodeIcon(t) {
+      const info = TYPE_INFO[t] || { emoji: "📍", label: "?" };
+      const color = TYPE_COLORS[t] || "#e5e7eb";
+      const html = `
+        <div class="mc-marker" style="--mc-color:${color}" title="${escapeHtml(info.label || "")}">
+          <div class="emoji">${escapeHtml(info.emoji)}</div>
+        </div>`;
+      return L.divIcon({
+        html,
+        className: "",
+        iconSize: [18,18],
+        iconAnchor: [9,9],
+        popupAnchor: [0,-8]
+      });
+    }
+    function addNodeMarker(r) {
+      const link = officialMapLink(r.lat, r.lon);
+      const popup = `
+        <b>${escapeHtml(r.name)}</b><br/>
+        ${escapeHtml(typeLabel(r.type))}<br/>
+        ${r.dist.toFixed(1)} km<br/>
+        <a href="${link}" target="_blank" rel="noreferrer">Open in MeshCore map</a>
+      `;
+      const m = L.marker([r.lat, r.lon], { icon: makeNodeIcon(r.type) }).bindPopup(popup);
+      markerLayer.addLayer(m);
+      if (r.key) markerIndex.set(r.key, m);
+
+      // If this marker is currently highlighted, apply highlight once element exists
+      m.on("add", () => {
+        if (r.key && highlightedKey === r.key) {
+          const el = m.getElement && m.getElement();
+          if (el) {
+            const inner = el.querySelector(".mc-marker");
+            if (inner) inner.classList.add("is-hover");
+          }
+        }
+      });
+    }
+    function destroyChart(k) {
+      try { if (charts[k]) { charts[k].destroy(); charts[k] = null; } } catch(_) {}
+    }
+
+    function destroyAnalytics() {
+      try { if (charts.analytics) { charts.analytics.destroy(); charts.analytics = null; } } catch(_) {}
+    }
+
+    function computeDailyRollup(rows) {
+      const byDay = new Map();
+      for (const r of rows) {
+        if (!r.insertedMs) continue;
+        const day = ymdFromMs(r.insertedMs);
+        const cur = byDay.get(day) || { 1:0,2:0,3:0,4:0,total:0 };
+        if (cur[r.type] !== undefined) cur[r.type] += 1;
+        cur.total += 1;
+        byDay.set(day, cur);
+      }
+      const days = Array.from(byDay.keys()).sort();
+      const labels = days;
+      const d1 = labels.map(d => (byDay.get(d)?.[1]||0));
+      const d2 = labels.map(d => (byDay.get(d)?.[2]||0));
+      const d3 = labels.map(d => (byDay.get(d)?.[3]||0));
+      const d4 = labels.map(d => (byDay.get(d)?.[4]||0));
+      const totals = labels.map(d => (byDay.get(d)?.total||0));
+      return { byDay, labels, d1, d2, d3, d4, totals };
+    }
+
+    function renderRollupTable(roll) {
+      const { labels, byDay } = roll;
+
+      elRollupBody.innerHTML = "";
+      for (const d of labels.slice().reverse()) {
+        const v = byDay.get(d);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="nowrap">${escapeHtml(d)}</td>
+          <td>${v?.[1]||0}</td>
+          <td>${v?.[2]||0}</td>
+          <td>${v?.[3]||0}</td>
+          <td>${v?.[4]||0}</td>
+          <td><b>${v?.total||0}</b></td>
+        `;
+        elRollupBody.appendChild(tr);
+      }
+      elRollupMeta.textContent = labels.length ? `${labels[0]} → ${labels[labels.length-1]}` : "–";
+    }
+
+    function movingAverage(values, windowSize) {
+      const out = [];
+      for (let i = 0; i < values.length; i++) {
+        const start = Math.max(0, i - windowSize + 1);
+        const slice = values.slice(start, i + 1);
+        const avg = slice.reduce((a,b)=>a+b,0) / slice.length;
+        out.push(Number.isFinite(avg) ? avg : 0);
+      }
+      return out;
+    }
+
+    function buildStackedChart(ctx, roll) {
+      const { labels, d1, d2, d3, d4 } = roll;
+      return new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Client", data: d1, stack: "s" },
+            { label: "Repeater", data: d2, stack: "s" },
+            { label: "Room", data: d3, stack: "s" },
+            { label: "Sensor", data: d4, stack: "s" },
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#cbd5e1", boxWidth: 10, boxHeight: 10, font: { size: 11 } } },
+            tooltip: { enabled: true }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: "#a9b6d3", font: { size: 10 }, maxRotation: 0, autoSkip: true },
+              grid: { color: "rgba(255,255,255,0.06)" }
+            },
+            y: {
+              stacked: true,
+              ticks: { color: "#a9b6d3", font: { size: 10 } },
+              grid: { color: "rgba(255,255,255,0.06)" }
+            }
+          }
+        }
+      });
+    }
+
+    function buildCumulativeChart(ctx, roll) {
+      const { labels, totals } = roll;
+      let cum = 0;
+      const cumVals = totals.map(v => (cum += v));
+      return new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Total nodes (cumulative)", data: cumVals, tension: 0.25, pointRadius: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 11 } } }, tooltip: { enabled: true } },
+          scales: {
+            x: { ticks: { color: "#a9b6d3", font: { size: 10 }, maxRotation: 0, autoSkip: true }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "#a9b6d3", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" } }
+          }
+        }
+      });
+    }
+
+    function buildMovingAvgChart(ctx, roll) {
+      const { labels, totals } = roll;
+      const ma7 = movingAverage(totals, 7);
+      return new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Daily adds (7d MA)", data: ma7, tension: 0.25, pointRadius: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 11 } } }, tooltip: { enabled: true } },
+          scales: {
+            x: { ticks: { color: "#a9b6d3", font: { size: 10 }, maxRotation: 0, autoSkip: true }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "#a9b6d3", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" } }
+          }
+        }
+      });
+    }
+
+    function buildDistributionChart(ctx, rows) {
+      const counts = { 1:0,2:0,3:0,4:0 };
+      for (const r of rows) if (counts[r.type] !== undefined) counts[r.type] += 1;
+      const labels = ["Client","Repeater","Room","Sensor"];
+      const data = [counts[1], counts[2], counts[3], counts[4]];
+      return new Chart(ctx, {
+        type: "doughnut",
+        data: { labels, datasets: [{ label: "Count", data }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 11 } } }, tooltip: { enabled: true } }
+        }
+      });
+    }
+
+    function buildDistanceChart(ctx, rows) {
+      const maxKm = Math.max(1, Number(lastRadiusKm || 50));
+      const buckets = Math.max(5, Math.min(16, Math.round(maxKm / 5))); // ~5km buckets, clamped
+      const step = maxKm / buckets;
+      const counts = new Array(buckets).fill(0);
+
+      for (const r of rows) {
+        const d = Math.max(0, r.dist || 0);
+        const idx = Math.min(buckets - 1, Math.floor(d / step));
+        counts[idx] += 1;
+      }
+
+      const labels = counts.map((_, i) => {
+        const a = (i * step);
+        const b = ((i + 1) * step);
+        return `${a.toFixed(0)}–${b.toFixed(0)}km`;
+      });
+
+      return new Chart(ctx, {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Nodes", data: counts }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 11 } } }, tooltip: { enabled: true } },
+          scales: {
+            x: { ticks: { color: "#a9b6d3", font: { size: 10 }, maxRotation: 0, autoSkip: true }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "#a9b6d3", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" } }
+          }
+        }
+      });
+    }
+
+    function buildFreshnessChart(ctx, rows) {
+      const now = Date.now();
+      const buckets = [
+        { label: "<1h",   max: 1*60*60*1000, count: 0 },
+        { label: "1–6h",  max: 6*60*60*1000, count: 0 },
+        { label: "6–24h", max: 24*60*60*1000, count: 0 },
+        { label: "1–7d",  max: 7*24*60*60*1000, count: 0 },
+        { label: ">7d",   max: Infinity, count: 0 },
+      ];
+
+      for (const r of rows) {
+        const ms = r.updatedMs || r.insertedMs;
+        if (!ms) continue;
+        const age = Math.max(0, now - ms);
+        const b = buckets.find(x => age <= x.max) || buckets[buckets.length - 1];
+        b.count += 1;
+      }
+
+      return new Chart(ctx, {
+        type: "bar",
+        data: { labels: buckets.map(b => b.label), datasets: [{ label: "Nodes", data: buckets.map(b => b.count) }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: "#cbd5e1", font: { size: 11 } } }, tooltip: { enabled: true } },
+          scales: {
+            x: { ticks: { color: "#a9b6d3", font: { size: 10 }, maxRotation: 0, autoSkip: false }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "#a9b6d3", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" } }
+          }
+        }
+      });
+    }
+
+    function renderAnalyticsChart(rows) {
+      destroyAnalytics();
+
+      const ctx = elAnalyticsChart.getContext("2d");
+      const roll = computeDailyRollup(rows);
+
+      // keep the under-map rollup table always updated
+      renderRollupTable(roll);
+
+      const sel = (elChartPicker?.value || currentChart);
+      currentChart = sel;
+
+      if (sel === "cumulative") charts.analytics = buildCumulativeChart(ctx, roll);
+      else if (sel === "movingAvg") charts.analytics = buildMovingAvgChart(ctx, roll);
+      else if (sel === "distribution") charts.analytics = buildDistributionChart(ctx, rows);
+      else if (sel === "distance") charts.analytics = buildDistanceChart(ctx, rows);
+      else if (sel === "freshness") charts.analytics = buildFreshnessChart(ctx, rows);
+      else charts.analytics = buildStackedChart(ctx, roll);
+    }
+
+
+    function applyFiltersAndRender() {
+      elErr.textContent = "";
+
+      const radiusKm = Math.max(1, Number(elRadiusKm.value || 50));
+      lastRadiusKm = radiusKm;
+      const daysNew = Math.max(0, Number(elDaysNew.value || 0));
+      const typeFilter = elTypeFilter.value;
+      const basis = elNewBasis.value;
+      const q = (elSearch.value || "").trim().toLowerCase();
+
+      circle.setLatLng([center.lat, center.lon]);
+      circle.setRadius(radiusKm * 1000);
+
+      const now = Date.now();
+      const cutoffNew = now - daysNew * 24 * 60 * 60 * 1000;
+
+      const rows = [];
+
+      for (const n of allNodes) {
+        const ll = getLatLon(n);
+        if (!ll) continue;
+
+        const t = getType(n);
+        if (typeFilter !== "all" && String(t) !== typeFilter) continue;
+
+        const name = getName(n);
+        const pk = (n.public_key || n._key || "");
+        if (q) {
+          const hay = (String(name) + " " + String(pk)).toLowerCase();
+          if (!hay.includes(q)) continue;
+        }
+
+        const insertedMs = parseMs(n.inserted_date || n.created_at);
+        const updatedMs = parseMs(n.updated_date || n.updated_at || n.last_seen_iso || n.last_advert);
+
+        if (daysNew > 0) {
+          const v = (basis === "inserted_date")
+            ? insertedMs
+            : (parseMs(n.first_seen_ms) || parseMs(n.first_seen));
+          if (!v || v < cutoffNew) continue;
+        }
+
+        const dist = haversineKm(center.lat, center.lon, ll.lat, ll.lon);
+        if (dist > radiusKm) continue;
+
+        rows.push({
+          name,
+          public_key: pk,
+          type: t,
+          insertedMs,
+          updatedMs,
+          dist,
+          lat: ll.lat,
+          lon: ll.lon,
+          key: (pk ? ('pk:' + pk) : ('ll:' + ll.lat.toFixed(5) + ',' + ll.lon.toFixed(5) + '|' + String(name)))
+        });
+}
+
+      rows.sort((a,b) => (b.insertedMs || 0) - (a.insertedMs || 0));
+
+      elTbody.innerHTML = "";
+      elTbl.hidden = false;
+
+      for (const r of rows.slice(0, 500)) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>
+            ${escapeHtml(r.name)}
+            <div class="mini mutedCell">${r.lat.toFixed(5)}, ${r.lon.toFixed(5)}</div>
+            <div class="mini mutedCell">${escapeHtml(String(r.public_key).slice(0, 18))}${String(r.public_key).length>18 ? "…" : ""}</div>
+          </td>
+          <td>${escapeHtml(typeLabel(r.type))}</td>
+          <td class="mutedCell">${r.insertedMs ? new Date(r.insertedMs).toISOString() : ""}</td>
+          <td class="mutedCell">${r.updatedMs ? new Date(r.updatedMs).toISOString() : ""}</td>
+          <td class="nowrap">${r.dist.toFixed(1)} km</td>
+        `;
+        
+        // Hover row -> highlight marker on map
+        tr.dataset.key = r.key || "";
+        tr.addEventListener("mouseenter", () => highlightMarker(tr.dataset.key));
+        tr.addEventListener("mouseleave", () => clearHighlight());
+elTbody.appendChild(tr);
+      }
+
+      clearMarkers();
+      for (const r of rows.slice(0, 300)) addNodeMarker(r);
+
+      lastFilteredRows = rows;
+      renderAnalyticsChart(rows);
+
+      elStatus.textContent = `Showing ${rows.length} within ${radiusKm}km (Total ${allNodes.length})`;
+      elCountMeta.textContent = `${rows.length} matches`;
+      elMapMeta.textContent = `Radius ${radiusKm}km • New≤${daysNew}d • ${q ? `Search “${q}”` : "No search"}`;
+    }
+
+    async function refreshData(force=false) {
+      elErr.textContent = "";
+      elStatus.textContent = force ? "Fetching…" : (isCacheStale() ? "Refreshing…" : "Using cache…");
+      elTbl.hidden = true;
+      elTbody.innerHTML = "";
+      clearMarkers();
+
+      await ensureFreshNodes(force);
+      applyFiltersAndRender();
+    }
+
+
+    function maybeRefreshAndRender() {
+      // Only refresh from backend if cache is older than 5 minutes.
+      ensureFreshNodes(false)
+        .then(() => applyFiltersAndRender())
+        .catch(e => { elErr.textContent = String(e?.message || e); });
+    }
+
+    let searchTimer = null;
+    elSearch.addEventListener("input", () => {
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(maybeRefreshAndRender, 150);
+    });
+
+    document.getElementById("btnRefresh").addEventListener("click", () => {
+      refreshData(true).catch(e => elErr.textContent = String(e?.message || e));
+    });
+
+    elDaysNew.addEventListener("input", maybeRefreshAndRender);
+    elRadiusKm.addEventListener("input", maybeRefreshAndRender);
+    elTypeFilter.addEventListener("change", maybeRefreshAndRender);
+    elNewBasis.addEventListener("change", maybeRefreshAndRender);
+
+    elChartPicker.addEventListener("change", () => {
+      if (lastFilteredRows) renderAnalyticsChart(lastFilteredRows);
+    });
+
+    refreshData(true).catch(e => elErr.textContent = String(e?.message || e));
+  })();
+  </script>
+</body>
+</html>
