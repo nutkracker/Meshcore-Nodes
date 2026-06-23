@@ -118,4 +118,4 @@ This project is licensed under the **MIT License**.
 
 Huge thanks to the **MeshCore team** for all the work behind the MeshCore network and platform.
 
-MeshCore project: https://meshcore.co.uk
+MeshCore project: [https://www.meshcore.io](https://www.meshcore.io)
