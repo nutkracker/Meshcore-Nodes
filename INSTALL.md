@@ -79,4 +79,4 @@ http://localhost:8000/meshcore-nodes.html
 ## Disclaimer
 
 This project is **not affiliated with or endorsed by MeshCore**.  
-MeshCore is an independent project — see https://meshcore.co.uk
+MeshCore is an independent project — see https://www.meshcore.io
